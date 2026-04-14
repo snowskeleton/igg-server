@@ -15,6 +15,19 @@ type AuthTokenResponse struct {
 	ExpiresIn    int    `json:"expires_in"`
 }
 
+type AuthRequestResponse struct {
+	Message   string `json:"message"`
+	PollToken string `json:"poll_token"`
+}
+
+type PollRequestBody struct {
+	PollToken string `json:"poll_token"`
+}
+
+type PollResponse struct {
+	Status string `json:"status"`
+}
+
 type RefreshRequestBody struct {
 	RefreshToken string `json:"refresh_token"`
 }

@@ -26,6 +26,7 @@ func New(cfg *config.Config, store *postgres.Store) http.Handler {
 	mux.HandleFunc("GET /v1/auth/verify", authH.VerifyMagicLink())
 	mux.HandleFunc("POST /v1/auth/refresh", authH.Refresh())
 	mux.HandleFunc("POST /v1/auth/logout", authH.Logout())
+	mux.HandleFunc("POST /v1/auth/poll", authH.PollAuth())
 
 	// Authenticated routes
 	authed := http.NewServeMux()

@@ -15,6 +15,7 @@ type MagicToken struct {
 	ID        string    `json:"id" db:"id"`
 	UserID    string    `json:"user_id" db:"user_id"`
 	Token     string    `json:"token" db:"token"`
+	PollToken *string   `json:"poll_token" db:"poll_token"`
 	ExpiresAt time.Time `json:"expires_at" db:"expires_at"`
 	Used      bool      `json:"used" db:"used"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`

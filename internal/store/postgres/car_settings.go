@@ -12,7 +12,7 @@ import (
 func (s *Store) UpsertCarSettings(ctx context.Context, tx *sql.Tx, cs *model.CarSettings) error {
 	_, err := tx.ExecContext(ctx,
 		`INSERT INTO car_settings (id, car_id, user_id, selected_tab, range_days, include_fuel, include_maintenance, include_completed, include_pending, custom, created_at, updated_at)
-		 VALUES (COALESCE(NULLIF($1,''), gen_random_uuid()::text), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		 VALUES (COALESCE(NULLIF($1,'')::uuid, gen_random_uuid()), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		 ON CONFLICT (car_id, user_id) DO UPDATE SET
 		   selected_tab=$4, range_days=$5, include_fuel=$6, include_maintenance=$7,
 		   include_completed=$8, include_pending=$9, custom=$10, updated_at=$12

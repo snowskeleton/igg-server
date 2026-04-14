@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"path/filepath"
+	"sort"
 	"strings"
 
 	_ "github.com/lib/pq"
@@ -32,18 +34,31 @@ func (s *Store) Close() error {
 }
 
 func (s *Store) RunMigrations(migrationsDir string) error {
-	data, err := os.ReadFile(migrationsDir + "/001_initial.up.sql")
+	files, err := filepath.Glob(filepath.Join(migrationsDir, "*.up.sql"))
 	if err != nil {
-		return fmt.Errorf("read migration: %w", err)
+		return fmt.Errorf("glob migrations: %w", err)
 	}
-	statements := strings.Split(string(data), ";")
-	for _, stmt := range statements {
-		stmt = strings.TrimSpace(stmt)
-		if stmt == "" {
-			continue
+	sort.Strings(files)
+
+	for _, file := range files {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			return fmt.Errorf("read migration %s: %w", file, err)
 		}
-		if _, err := s.db.Exec(stmt); err != nil {
-			return fmt.Errorf("exec migration: %w (statement: %s)", err, stmt[:min(len(stmt), 80)])
+		statements := strings.Split(string(data), ";")
+		for _, stmt := range statements {
+			stmt = strings.TrimSpace(stmt)
+			if stmt == "" {
+				continue
+			}
+			if _, err := s.db.Exec(stmt); err != nil {
+				// Ignore "already exists" errors so migrations are idempotent
+				if strings.Contains(err.Error(), "already exists") ||
+					strings.Contains(err.Error(), "duplicate") {
+					continue
+				}
+				return fmt.Errorf("exec migration %s: %w (statement: %s)", filepath.Base(file), err, stmt[:min(len(stmt), 80)])
+			}
 		}
 	}
 	return nil

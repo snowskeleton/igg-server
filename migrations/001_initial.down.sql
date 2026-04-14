@@ -1,0 +1,10 @@
+DROP TABLE IF EXISTS sync_cursors;
+DROP TABLE IF EXISTS user_car_prefs;
+DROP TABLE IF EXISTS car_shares;
+DROP TABLE IF EXISTS car_settings;
+DROP TABLE IF EXISTS scheduled_services;
+DROP TABLE IF EXISTS services;
+DROP TABLE IF EXISTS cars;
+DROP TABLE IF EXISTS refresh_tokens;
+DROP TABLE IF EXISTS magic_tokens;
+DROP TABLE IF EXISTS users;

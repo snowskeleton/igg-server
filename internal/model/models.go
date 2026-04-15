@@ -58,8 +58,9 @@ type Service struct {
 	IsFuel          bool      `json:"is_fuel" db:"is_fuel"`
 	IsFullTank      bool      `json:"is_full_tank" db:"is_full_tank"`
 	Gallons         float64   `json:"gallons" db:"gallons"`
-	VendorName      string    `json:"vendor_name" db:"vendor_name"`
-	Deleted         bool      `json:"deleted" db:"deleted"`
+	VendorName       string    `json:"vendor_name" db:"vendor_name"`
+	AnomalyDismissed bool      `json:"anomaly_dismissed" db:"anomaly_dismissed"`
+	Deleted          bool      `json:"deleted" db:"deleted"`
 	CreatedAt       time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
 }

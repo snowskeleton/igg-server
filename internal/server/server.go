@@ -35,8 +35,10 @@ func New(cfg *config.Config, store *postgres.Store) http.Handler {
 	authed.HandleFunc("GET /v1/cars/{carId}/shares", sharingH.ListShares())
 	authed.HandleFunc("DELETE /v1/cars/{carId}/shares/{shareId}", sharingH.RevokeShare())
 	authed.HandleFunc("GET /v1/shares/pending", sharingH.PendingShares())
+	authed.HandleFunc("GET /v1/shares/received", sharingH.ReceivedShares())
 	authed.HandleFunc("POST /v1/shares/{shareId}/accept", sharingH.AcceptShare())
 	authed.HandleFunc("POST /v1/shares/{shareId}/decline", sharingH.DeclineShare())
+	authed.HandleFunc("POST /v1/shares/{shareId}/leave", sharingH.LeaveShare())
 	authed.HandleFunc("GET /v1/me", meH.GetMe())
 	authed.HandleFunc("DELETE /v1/me", meH.DeleteMe())
 

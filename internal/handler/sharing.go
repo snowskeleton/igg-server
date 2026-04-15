@@ -185,6 +185,62 @@ func (h *SharingHandler) PendingShares() http.HandlerFunc {
 	}
 }
 
+// ReceivedShares — GET /v1/shares/received
+func (h *SharingHandler) ReceivedShares() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userEmail := middleware.GetUserEmail(r.Context())
+		shares, ownerEmails, err := h.store.GetReceivedSharesForEmail(r.Context(), userEmail)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to get received shares")
+			return
+		}
+
+		var out []model.ShareResponse
+		for i, s := range shares {
+			out = append(out, model.ShareResponse{
+				ID:           s.ID,
+				CarID:        s.CarID,
+				InvitedEmail: s.InvitedEmail,
+				Status:       s.Status,
+				OwnerEmail:   ownerEmails[i],
+				CreatedAt:    s.CreatedAt,
+			})
+		}
+		if out == nil {
+			out = []model.ShareResponse{}
+		}
+		writeJSON(w, http.StatusOK, out)
+	}
+}
+
+// LeaveShare — POST /v1/shares/{shareId}/leave
+func (h *SharingHandler) LeaveShare() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userEmail := middleware.GetUserEmail(r.Context())
+		shareID := r.PathValue("shareId")
+
+		share, err := h.store.GetShareByID(r.Context(), shareID)
+		if err != nil || share == nil {
+			writeError(w, http.StatusNotFound, "share not found")
+			return
+		}
+		if share.InvitedEmail != userEmail {
+			writeError(w, http.StatusForbidden, "this share is not for you")
+			return
+		}
+		if share.Status != "accepted" {
+			writeError(w, http.StatusBadRequest, "share is not accepted")
+			return
+		}
+
+		if err := h.store.UpdateShareStatus(r.Context(), shareID, "declined", nil); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to leave share")
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]string{"status": "left"})
+	}
+}
+
 // AcceptShare — POST /v1/shares/{shareId}/accept
 func (h *SharingHandler) AcceptShare() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

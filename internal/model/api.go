@@ -83,6 +83,7 @@ type ShareResponse struct {
 	CarID        string    `json:"car_id"`
 	InvitedEmail string    `json:"invited_email"`
 	Status       string    `json:"status"`
+	OwnerEmail   string    `json:"owner_email,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 

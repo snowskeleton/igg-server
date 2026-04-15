@@ -86,6 +86,33 @@ func (s *Store) GetPendingSharesForEmail(ctx context.Context, email string) ([]m
 	return out, rows.Err()
 }
 
+// GetReceivedSharesForEmail returns pending and accepted shares for the given email, with the owner's email.
+func (s *Store) GetReceivedSharesForEmail(ctx context.Context, email string) ([]model.CarShare, []string, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT cs.id, cs.car_id, cs.shared_by_id, cs.shared_with_id, cs.invited_email, cs.status, cs.token, cs.created_at, cs.updated_at, u.email
+		 FROM car_shares cs
+		 JOIN users u ON cs.shared_by_id = u.id
+		 WHERE cs.invited_email = $1 AND cs.status IN ('pending', 'accepted')
+		 ORDER BY cs.created_at`, email)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+
+	var shares []model.CarShare
+	var ownerEmails []string
+	for rows.Next() {
+		var cs model.CarShare
+		var ownerEmail string
+		if err := rows.Scan(&cs.ID, &cs.CarID, &cs.SharedByID, &cs.SharedWithID, &cs.InvitedEmail, &cs.Status, &cs.Token, &cs.CreatedAt, &cs.UpdatedAt, &ownerEmail); err != nil {
+			return nil, nil, err
+		}
+		shares = append(shares, cs)
+		ownerEmails = append(ownerEmails, ownerEmail)
+	}
+	return shares, ownerEmails, rows.Err()
+}
+
 func (s *Store) UpdateShareStatus(ctx context.Context, id, status string, sharedWithID *string) error {
 	_, err := s.db.ExecContext(ctx,
 		`UPDATE car_shares SET status = $2, shared_with_id = COALESCE($3, shared_with_id), updated_at = now() WHERE id = $1`,

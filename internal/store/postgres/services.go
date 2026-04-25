@@ -11,14 +11,14 @@ import (
 
 func (s *Store) UpsertService(ctx context.Context, tx *sql.Tx, svc *model.Service) error {
 	_, err := tx.ExecContext(ctx,
-		`INSERT INTO services (id, car_id, cost, date, pending, name, full_description, odometer, is_fuel, is_full_tank, gallons, vendor_name, anomaly_dismissed, deleted, created_at, updated_at)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+		`INSERT INTO services (id, car_id, cost, date, pending, name, full_description, odometer, is_fuel, is_full_tank, gallons, vendor_name, deleted, created_at, updated_at)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
 		 ON CONFLICT (id) DO UPDATE SET
 		   cost=$3, date=$4, pending=$5, name=$6, full_description=$7, odometer=$8,
-		   is_fuel=$9, is_full_tank=$10, gallons=$11, vendor_name=$12, anomaly_dismissed=$13, deleted=$14, updated_at=$16
-		 WHERE services.updated_at < $16`,
+		   is_fuel=$9, is_full_tank=$10, gallons=$11, vendor_name=$12, deleted=$13, updated_at=$15
+		 WHERE services.updated_at < $15`,
 		svc.ID, svc.CarID, svc.Cost, svc.Date, svc.Pending, svc.Name, svc.FullDescription,
-		svc.Odometer, svc.IsFuel, svc.IsFullTank, svc.Gallons, svc.VendorName, svc.AnomalyDismissed, svc.Deleted,
+		svc.Odometer, svc.IsFuel, svc.IsFullTank, svc.Gallons, svc.VendorName, svc.Deleted,
 		svc.CreatedAt, svc.UpdatedAt)
 	return err
 }
@@ -28,7 +28,7 @@ func (s *Store) GetServicesForCars(ctx context.Context, carIDs []string, since t
 		return nil, nil
 	}
 	query, args := inQuery(
-		`SELECT id, car_id, cost, date, pending, name, full_description, odometer, is_fuel, is_full_tank, gallons, vendor_name, anomaly_dismissed, deleted, created_at, updated_at
+		`SELECT id, car_id, cost, date, pending, name, full_description, odometer, is_fuel, is_full_tank, gallons, vendor_name, deleted, created_at, updated_at
 		 FROM services WHERE updated_at > $1 AND car_id IN (`, since, carIDs)
 	query += `) ORDER BY updated_at`
 
@@ -43,7 +43,7 @@ func (s *Store) GetServicesForCars(ctx context.Context, carIDs []string, since t
 		var svc model.Service
 		if err := rows.Scan(&svc.ID, &svc.CarID, &svc.Cost, &svc.Date, &svc.Pending, &svc.Name,
 			&svc.FullDescription, &svc.Odometer, &svc.IsFuel, &svc.IsFullTank, &svc.Gallons,
-			&svc.VendorName, &svc.AnomalyDismissed, &svc.Deleted, &svc.CreatedAt, &svc.UpdatedAt); err != nil {
+			&svc.VendorName, &svc.Deleted, &svc.CreatedAt, &svc.UpdatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, svc)

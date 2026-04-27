@@ -98,6 +98,18 @@ type HealthResponse struct {
 	Status string `json:"status"`
 }
 
+// Devices
+type RegisterDeviceRequest struct {
+	DeviceID   string `json:"device_id"`
+	Token      string `json:"token"`
+	Platform   string `json:"platform"`
+	NotifyMode string `json:"notify_mode"`
+}
+
+type UnregisterDeviceRequest struct {
+	DeviceID string `json:"device_id"`
+}
+
 // Error
 type ErrorResponse struct {
 	Error string `json:"error"`

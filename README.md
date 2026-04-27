@@ -58,6 +58,12 @@ openssl rand -base64 48
 | `SMTP_FROM` | No | From address for emails |
 | `SMTP_MOCK` | No | Set `true` to log emails instead of sending (default: `true`) |
 | `MIGRATIONS_DIR` | No | Path to migrations folder (default: `migrations`) |
+| `APNS_KEY_ID` | No | APNs authentication key ID (from Apple Developer portal) |
+| `APNS_TEAM_ID` | No | Apple Developer Team ID |
+| `APNS_KEY_PATH` | No | Path to the `.p8` APNs key file |
+| `APNS_KEY_CONTENT` | No | APNs `.p8` key contents (alternative to `APNS_KEY_PATH`) |
+| `APNS_BUNDLE_ID` | No | App bundle ID (default: `net.snowskeleton.I-Got-Gas`) |
+| `APNS_PRODUCTION` | No | Set `true` for production APNs gateway (default: `false`) |
 
 ## API Endpoints
 
@@ -71,6 +77,11 @@ openssl rand -base64 48
 ### Sync (auth required)
 
 - `POST /v1/sync` — bidirectional push+pull sync
+
+### Devices (auth required)
+
+- `PUT /v1/devices` — register/update push notification token
+- `DELETE /v1/devices` — unregister device (on logout)
 
 ### Sharing (auth required)
 
@@ -89,6 +100,34 @@ openssl rand -base64 48
 ### Health (no auth)
 
 - `GET /v1/health` — returns `{"status":"ok"}`
+
+## Push Notifications (APNs)
+
+Push notifications are optional. Without APNs configured, the server runs normally and clients fall back to periodic polling.
+
+### Setup
+
+1. Go to [Apple Developer > Certificates, Identifiers & Profiles > Keys](https://developer.apple.com/account/resources/authkeys/list)
+2. Create a new key with **Apple Push Notifications service (APNs)** enabled
+3. Download the `.p8` file (you can only download it once)
+4. Note the **Key ID** shown on the key details page
+5. Note your **Team ID** from [Membership Details](https://developer.apple.com/account#MembershipDetailsCard)
+
+### Configuration
+
+Add to your `.env`:
+
+```
+APNS_KEY_ID=ABC123DEFG
+APNS_TEAM_ID=YOUR_TEAM_ID
+APNS_KEY_PATH=/path/to/AuthKey_ABC123DEFG.p8
+APNS_BUNDLE_ID=net.snowskeleton.I-Got-Gas
+APNS_PRODUCTION=false
+```
+
+For Docker / environments where file mounting is inconvenient, you can use `APNS_KEY_CONTENT` instead of `APNS_KEY_PATH` with the full `.p8` file contents (including the `-----BEGIN PRIVATE KEY-----` header/footer).
+
+Set `APNS_PRODUCTION=true` when deploying for App Store / TestFlight builds.
 
 ## Reverse Proxy
 

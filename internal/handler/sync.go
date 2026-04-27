@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/snowskeleton/igg-server/internal/apns"
 	"github.com/snowskeleton/igg-server/internal/middleware"
 	"github.com/snowskeleton/igg-server/internal/model"
 	"github.com/snowskeleton/igg-server/internal/store/postgres"
@@ -13,10 +15,11 @@ import (
 
 type SyncHandler struct {
 	store *postgres.Store
+	apns  *apns.Client
 }
 
-func NewSyncHandler(store *postgres.Store) *SyncHandler {
-	return &SyncHandler{store: store}
+func NewSyncHandler(store *postgres.Store, apnsClient *apns.Client) *SyncHandler {
+	return &SyncHandler{store: store, apns: apnsClient}
 }
 
 func (h *SyncHandler) Sync() http.HandlerFunc {
@@ -64,6 +67,9 @@ func (h *SyncHandler) Sync() http.HandlerFunc {
 		}
 		defer tx.Rollback()
 
+		// Track which car IDs had shared-relevant changes pushed
+		changedCarIDs := make(map[string]bool)
+
 		// Cars: only owners can upsert
 		for i := range req.Changes.Cars {
 			c := &req.Changes.Cars[i]
@@ -74,6 +80,7 @@ func (h *SyncHandler) Sync() http.HandlerFunc {
 			// Track newly-created cars as owned
 			ownedIDs[c.ID] = true
 			accessibleIDs[c.ID] = true
+			changedCarIDs[c.ID] = true
 		}
 
 		// Services: owners and shared users can write
@@ -89,6 +96,7 @@ func (h *SyncHandler) Sync() http.HandlerFunc {
 			if err := h.store.UpsertService(ctx, tx, svc); err != nil {
 				log.Printf("sync: upsert service %s: %v", svc.ID, err)
 			}
+			changedCarIDs[svc.CarID] = true
 		}
 
 		// Scheduled services: same rules as services
@@ -103,9 +111,11 @@ func (h *SyncHandler) Sync() http.HandlerFunc {
 			if err := h.store.UpsertScheduledService(ctx, tx, ss); err != nil {
 				log.Printf("sync: upsert scheduled service %s: %v", ss.ID, err)
 			}
+			changedCarIDs[ss.CarID] = true
 		}
 
 		// Car settings: per-user, only for accessible cars
+		// NOTE: CarSettings are per-user, NOT shared — do not add to changedCarIDs
 		for i := range req.Changes.CarSettings {
 			cs := &req.Changes.CarSettings[i]
 			cs.UserID = userID // force user
@@ -120,6 +130,15 @@ func (h *SyncHandler) Sync() http.HandlerFunc {
 		if err := tx.Commit(); err != nil {
 			writeError(w, http.StatusInternalServerError, "internal error")
 			return
+		}
+
+		// ── Send push notifications for shared car changes ──
+		if h.apns != nil && len(changedCarIDs) > 0 {
+			carIDs := make([]string, 0, len(changedCarIDs))
+			for id := range changedCarIDs {
+				carIDs = append(carIDs, id)
+			}
+			go h.notifySharedUsers(userID, req.DeviceID, carIDs)
 		}
 
 		// ── Pull: gather all changes since cursor ──
@@ -214,4 +233,45 @@ func (h *SyncHandler) Sync() http.HandlerFunc {
 
 		writeJSON(w, http.StatusOK, resp)
 	}
+}
+
+// notifySharedUsers sends push notifications to all users with access to the
+// changed cars, excluding the user and device that triggered the sync.
+func (h *SyncHandler) notifySharedUsers(userID, deviceID string, carIDs []string) {
+	ctx, cancel := contextWithTimeout()
+	defer cancel()
+
+	userIDs, err := h.store.GetUsersWithAccessToCars(ctx, carIDs, userID)
+	if err != nil {
+		log.Printf("sync: get users with access: %v", err)
+		return
+	}
+	if len(userIDs) == 0 {
+		return
+	}
+
+	tokens, err := h.store.GetDeviceTokensForUsers(ctx, userIDs, deviceID)
+	if err != nil {
+		log.Printf("sync: get device tokens: %v", err)
+		return
+	}
+
+	for _, dt := range tokens {
+		var remove bool
+		switch dt.NotifyMode {
+		case "visible":
+			remove = h.apns.SendAlert(dt.Token, "I Got Gas", "A shared vehicle was updated")
+		default:
+			remove = h.apns.SendBackground(dt.Token)
+		}
+		if remove {
+			if err := h.store.DeleteDeviceTokenByToken(ctx, dt.Token); err != nil {
+				log.Printf("sync: cleanup invalid token: %v", err)
+			}
+		}
+	}
+}
+
+func contextWithTimeout() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), 30*time.Second)
 }

@@ -18,6 +18,13 @@ type Config struct {
 	SMTPPass string
 	SMTPFrom string
 	SMTPMock bool
+
+	APNsKeyID      string
+	APNsTeamID     string
+	APNsKeyPath    string
+	APNsKeyContent string
+	APNsBundleID   string
+	APNsProduction bool
 }
 
 func Load() (*Config, error) {
@@ -35,6 +42,13 @@ func Load() (*Config, error) {
 
 	port, _ := strconv.Atoi(getenv("SMTP_PORT", "587"))
 	c.SMTPPort = port
+
+	c.APNsKeyID = getenv("APNS_KEY_ID", "")
+	c.APNsTeamID = getenv("APNS_TEAM_ID", "")
+	c.APNsKeyPath = getenv("APNS_KEY_PATH", "")
+	c.APNsKeyContent = getenv("APNS_KEY_CONTENT", "")
+	c.APNsBundleID = getenv("APNS_BUNDLE_ID", "net.snowskeleton.I-Got-Gas")
+	c.APNsProduction = getenv("APNS_PRODUCTION", "false") == "true"
 
 	if c.JWTSecret == "" {
 		return nil, fmt.Errorf("JWT_SECRET is required")

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{{if .DeepLink}}<meta http-equiv="refresh" content="0;url={{.DeepLink}}">{{end}}
+<title>{{.Title}}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; padding: 60px 20px; background: #f5f5f7; }
+  .card { max-width: 400px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+  h1 { font-size: 24px; margin-bottom: 12px; }
+  p { color: #666; margin-bottom: 24px; }
+  a.btn { display: inline-block; background: #007AFF; color: white; text-decoration: none; padding: 12px 32px; border-radius: 10px; font-weight: 600; }
+  .flash-error { background: #f8d7da; color: #721c24; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="card">
+  {{if .Error}}
+  <h1>Verification Failed</h1>
+  <div class="flash-error">{{.Error}}</div>
+  {{else}}
+  <h1>{{.Title}}</h1>
+  <p>{{.Message}}</p>
+  {{if .DeepLink}}
+  <a class="btn" href="{{.DeepLink}}">Open I Got Gas</a>
+  <script>window.location.href = "{{.DeepLink}}";</script>
+  {{end}}
+  {{end}}
+</div>
+</body>
+</html>

@@ -1,0 +1,34 @@
+{{define "content"}}
+<h2 style="margin-bottom: 24px;">APNs Configuration</h2>
+{{if .Flash}}
+<div class="flash {{.FlashClass}}">{{.Flash}}</div>
+{{end}}
+<div class="card">
+  <form method="POST" action="/admin/config" class="config-form">
+    <label for="apns_key_id">Key ID</label>
+    <input type="text" id="apns_key_id" name="apns_key_id" value="{{.Config.APNsKeyID}}" placeholder="ABC123DEFG">
+    <div class="hint">The 10-character identifier for your APNs key.</div>
+
+    <label for="apns_team_id">Team ID</label>
+    <input type="text" id="apns_team_id" name="apns_team_id" value="{{.Config.APNsTeamID}}" placeholder="YOUR_TEAM_ID">
+    <div class="hint">Your Apple Developer Team ID.</div>
+
+    <label for="apns_key_content">Key Content (P8)</label>
+    <input type="text" id="apns_key_content" name="apns_key_content" value="{{.Config.APNsKeyContent}}" placeholder="-----BEGIN PRIVATE KEY-----...">
+    <div class="hint">The full contents of your .p8 key file. Overrides key file path.</div>
+
+    <label for="apns_bundle_id">Bundle ID</label>
+    <input type="text" id="apns_bundle_id" name="apns_bundle_id" value="{{.Config.APNsBundleID}}" placeholder="net.snowskeleton.I-Got-Gas">
+
+    <label for="apns_production">Environment</label>
+    <select id="apns_production" name="apns_production">
+      <option value="false" {{if not .Config.APNsProduction}}selected{{end}}>Sandbox (Development)</option>
+      <option value="true" {{if .Config.APNsProduction}}selected{{end}}>Production</option>
+    </select>
+
+    <div style="margin-top: 24px;">
+      <button type="submit" class="btn">Save & Reload APNs</button>
+    </div>
+  </form>
+</div>
+{{end}}

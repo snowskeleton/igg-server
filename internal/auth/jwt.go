@@ -83,3 +83,18 @@ func HashRefreshToken(token string) string {
 	h := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(h[:])
 }
+
+const SessionTokenBytes = 32
+
+func GenerateSessionToken() (string, error) {
+	b := make([]byte, SessionTokenBytes)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(b), nil
+}
+
+func HashSessionToken(token string) string {
+	h := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(h[:])
+}

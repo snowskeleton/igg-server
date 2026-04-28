@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/snowskeleton/igg-server/internal/apns"
@@ -15,11 +16,11 @@ import (
 
 type SyncHandler struct {
 	store *postgres.Store
-	apns  *apns.Client
+	apns  *atomic.Pointer[apns.Client]
 }
 
-func NewSyncHandler(store *postgres.Store, apnsClient *apns.Client) *SyncHandler {
-	return &SyncHandler{store: store, apns: apnsClient}
+func NewSyncHandler(store *postgres.Store, apnsPtr *atomic.Pointer[apns.Client]) *SyncHandler {
+	return &SyncHandler{store: store, apns: apnsPtr}
 }
 
 func (h *SyncHandler) Sync() http.HandlerFunc {
@@ -133,12 +134,13 @@ func (h *SyncHandler) Sync() http.HandlerFunc {
 		}
 
 		// ── Send push notifications for shared car changes ──
-		if h.apns != nil && len(changedCarIDs) > 0 {
+		apnsClient := h.apns.Load()
+		if apnsClient != nil && len(changedCarIDs) > 0 {
 			carIDs := make([]string, 0, len(changedCarIDs))
 			for id := range changedCarIDs {
 				carIDs = append(carIDs, id)
 			}
-			go h.notifySharedUsers(userID, req.DeviceID, carIDs)
+			go h.notifySharedUsers(apnsClient, userID, req.DeviceID, carIDs)
 		}
 
 		// ── Pull: gather all changes since cursor ──
@@ -237,7 +239,7 @@ func (h *SyncHandler) Sync() http.HandlerFunc {
 
 // notifySharedUsers sends push notifications to all users with access to the
 // changed cars, excluding the user and device that triggered the sync.
-func (h *SyncHandler) notifySharedUsers(userID, deviceID string, carIDs []string) {
+func (h *SyncHandler) notifySharedUsers(apnsClient *apns.Client, userID, deviceID string, carIDs []string) {
 	ctx, cancel := contextWithTimeout()
 	defer cancel()
 
@@ -260,9 +262,9 @@ func (h *SyncHandler) notifySharedUsers(userID, deviceID string, carIDs []string
 		var remove bool
 		switch dt.NotifyMode {
 		case "visible":
-			remove = h.apns.SendAlert(dt.Token, "I Got Gas", "A shared vehicle was updated")
+			remove = apnsClient.SendAlert(dt.Token, "I Got Gas", "A shared vehicle was updated")
 		default:
-			remove = h.apns.SendBackground(dt.Token)
+			remove = apnsClient.SendBackground(dt.Token)
 		}
 		if remove {
 			if err := h.store.DeleteDeviceTokenByToken(ctx, dt.Token); err != nil {

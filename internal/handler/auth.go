@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/snowskeleton/igg-server/internal/admin"
 	"github.com/snowskeleton/igg-server/internal/auth"
 	"github.com/snowskeleton/igg-server/internal/config"
 	"github.com/snowskeleton/igg-server/internal/email"
@@ -122,32 +123,11 @@ func (h *AuthHandler) VerifyMagicLink() http.HandlerFunc {
 		)
 
 		// Serve HTML page that auto-redirects to the app
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="0;url=%s">
-<title>Login Successful</title>
-<style>
-  body { font-family: -apple-system, system-ui, sans-serif; text-align: center; padding: 60px 20px; background: #f5f5f7; }
-  .card { max-width: 400px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
-  h1 { font-size: 24px; margin-bottom: 12px; }
-  p { color: #666; margin-bottom: 24px; }
-  a { display: inline-block; background: #007AFF; color: white; text-decoration: none; padding: 12px 32px; border-radius: 10px; font-weight: 600; }
-</style>
-</head>
-<body>
-<div class="card">
-  <h1>Login Successful!</h1>
-  <p>You should be redirected to I Got Gas automatically.</p>
-  <a href="%s">Open I Got Gas</a>
-</div>
-<script>window.location.href = %q;</script>
-</body>
-</html>`, deepLink, deepLink, deepLink)
+		admin.RenderVerifyPage(w, admin.VerifyPageData{
+			Title:    "Login Successful!",
+			Message:  "You should be redirected to I Got Gas automatically.",
+			DeepLink: deepLink,
+		})
 	}
 }
 

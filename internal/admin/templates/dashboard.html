@@ -1,0 +1,27 @@
+{{define "content"}}
+<h2 style="margin-bottom: 24px;">Dashboard</h2>
+<div class="card">
+  <div class="stats">
+    <div class="stat">
+      <div class="num">{{.Stats.UserCount}}</div>
+      <div class="label">Users</div>
+    </div>
+    <div class="stat">
+      <div class="num">{{.Stats.CarCount}}</div>
+      <div class="label">Vehicles</div>
+    </div>
+    <div class="stat">
+      <div class="num">{{.Stats.ServiceCount}}</div>
+      <div class="label">Service Records</div>
+    </div>
+    <div class="stat">
+      <div class="num">{{.Stats.DeviceTokenCount}}</div>
+      <div class="label">Device Tokens</div>
+    </div>
+    <div class="stat">
+      <div class="num">{{.Stats.ShareCount}}</div>
+      <div class="label">Active Shares</div>
+    </div>
+  </div>
+</div>
+{{end}}

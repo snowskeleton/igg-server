@@ -1,0 +1,29 @@
+{{define "content"}}
+<h2 style="margin-bottom: 24px;">Users ({{len .Users}})</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Email</th>
+        <th>Cars</th>
+        <th>Last Sync</th>
+        <th>Created</th>
+        <th>ID</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Users}}
+      <tr>
+        <td>{{.Email}}</td>
+        <td>{{.CarCount}}</td>
+        <td>{{if .LastSyncAt}}{{.LastSyncAt.Format "Jan 2, 2006 3:04 PM"}}{{else}}<span class="badge badge-gray">Never</span>{{end}}</td>
+        <td>{{.CreatedAt.Format "Jan 2, 2006"}}</td>
+        <td class="mono">{{slice .ID 0 8}}...</td>
+      </tr>
+      {{else}}
+      <tr><td colspan="5" style="text-align:center; color:#86868b; padding:24px;">No users yet.</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}

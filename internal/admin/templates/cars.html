@@ -1,0 +1,35 @@
+{{define "content"}}
+<h2 style="margin-bottom: 24px;">Vehicles ({{len .Cars}})</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Make / Model</th>
+        <th>Year</th>
+        <th>Owner</th>
+        <th>Services</th>
+        <th>Shares</th>
+        <th>Status</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Cars}}
+      <tr>
+        <td>{{if .Name}}{{.Name}}{{else}}<span style="color:#86868b">—</span>{{end}}</td>
+        <td>{{.Make}} {{.Model}}</td>
+        <td>{{if .Year}}{{.Year}}{{else}}—{{end}}</td>
+        <td>{{.OwnerEmail}}</td>
+        <td>{{.ServiceCount}}</td>
+        <td>{{.ShareCount}}</td>
+        <td>{{if .Deleted}}<span class="badge badge-red">Deleted</span>{{else}}<span class="badge badge-green">Active</span>{{end}}</td>
+        <td>{{.CreatedAt.Format "Jan 2, 2006"}}</td>
+      </tr>
+      {{else}}
+      <tr><td colspan="8" style="text-align:center; color:#86868b; padding:24px;">No vehicles yet.</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}

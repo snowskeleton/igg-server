@@ -50,6 +50,23 @@ If you don't have an account, one will be created for you.
 	return s.send(to, subject, body)
 }
 
+func (s *Sender) SendAdminMagicLink(to, token string) error {
+	link := fmt.Sprintf("%s/admin/verify?token=%s", s.cfg.BaseURL, token)
+	subject := "Admin Login – I Got Gas"
+	body := fmt.Sprintf(`Hello,
+
+Click the link below to sign in to the I Got Gas admin dashboard:
+
+%s
+
+This link expires in 15 minutes and can only be used once.
+
+If you didn't request this, you can safely ignore this email.
+`, link)
+
+	return s.send(to, subject, body)
+}
+
 func (s *Sender) send(to, subject, body string) error {
 	if s.cfg.SMTPMock {
 		log.Printf("[MOCK EMAIL] To: %s\nSubject: %s\n\n%s\n", to, subject, body)

@@ -25,6 +25,8 @@ type Config struct {
 	APNsKeyContent string
 	APNsBundleID   string
 	APNsProduction bool
+
+	AdminEmail string
 }
 
 func Load() (*Config, error) {
@@ -49,6 +51,8 @@ func Load() (*Config, error) {
 	c.APNsKeyContent = getenv("APNS_KEY_CONTENT", "")
 	c.APNsBundleID = getenv("APNS_BUNDLE_ID", "net.snowskeleton.I-Got-Gas")
 	c.APNsProduction = getenv("APNS_PRODUCTION", "false") == "true"
+
+	c.AdminEmail = getenv("ADMIN_EMAIL", "")
 
 	if c.JWTSecret == "" {
 		return nil, fmt.Errorf("JWT_SECRET is required")

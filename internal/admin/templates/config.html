@@ -14,8 +14,8 @@
     <div class="hint">Your Apple Developer Team ID.</div>
 
     <label for="apns_key_content">Key Content (P8)</label>
-    <input type="text" id="apns_key_content" name="apns_key_content" value="{{.Config.APNsKeyContent}}" placeholder="-----BEGIN PRIVATE KEY-----...">
-    <div class="hint">The full contents of your .p8 key file. Overrides key file path.</div>
+    <textarea id="apns_key_content" name="apns_key_content" rows="6" placeholder="-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----" style="font-family:'SF Mono',SFMono-Regular,Menlo,monospace; font-size:12px;">{{.Config.APNsKeyContent}}</textarea>
+    <div class="hint">The full contents of your .p8 key file. Paste with newlines preserved.</div>
 
     <label for="apns_bundle_id">Bundle ID</label>
     <input type="text" id="apns_bundle_id" name="apns_bundle_id" value="{{.Config.APNsBundleID}}" placeholder="net.snowskeleton.I-Got-Gas">

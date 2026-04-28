@@ -187,17 +187,36 @@ func (h *Handler) Dashboard() http.HandlerFunc {
 // Users shows the user list page.
 func (h *Handler) Users() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		users, err := h.store.GetAllUsers(r.Context())
+		ctx := r.Context()
+		users, err := h.store.GetAllUsers(ctx)
 		if err != nil {
 			log.Printf("admin users: %v", err)
 			http.Error(w, "Internal error", http.StatusInternalServerError)
 			return
 		}
 
+		devices, err := h.store.GetDeviceTokensByUser(ctx)
+		if err != nil {
+			log.Printf("admin users devices: %v", err)
+		}
+		if devices == nil {
+			devices = make(map[string][]postgres.AdminDevice)
+		}
+
+		notifications, err := h.store.GetRecentNotificationsByUser(ctx)
+		if err != nil {
+			log.Printf("admin users notifications: %v", err)
+		}
+		if notifications == nil {
+			notifications = make(map[string][]postgres.AdminNotification)
+		}
+
 		data := map[string]any{
-			"Title": "Users",
-			"Nav":   "users",
-			"Users": users,
+			"Title":         "Users",
+			"Nav":           "users",
+			"Users":         users,
+			"Devices":       devices,
+			"Notifications": notifications,
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		renderTemplate(w, usersTmpl, data)
@@ -249,12 +268,14 @@ func (h *Handler) ConfigPage() http.HandlerFunc {
 			APNsProduction: configOrDefault(cfgMap, "apns_production", boolToStr(h.cfg.APNsProduction)) == "true",
 		}
 
+		flash, flashClass := consumeFlash(r, w)
+
 		data := map[string]any{
 			"Title":      "Config",
 			"Nav":        "config",
 			"Config":     apnsCfg,
-			"Flash":      r.URL.Query().Get("flash"),
-			"FlashClass": r.URL.Query().Get("flash_class"),
+			"Flash":      flash,
+			"FlashClass": flashClass,
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		renderTemplate(w, configTmpl, data)
@@ -275,7 +296,8 @@ func (h *Handler) ConfigSave() http.HandlerFunc {
 		for k, v := range keys {
 			if err := h.store.SetServerConfig(r.Context(), k, v); err != nil {
 				log.Printf("admin config save %s: %v", k, err)
-				http.Redirect(w, r, "/admin/config?flash=Failed+to+save+config.&flash_class=flash-error", http.StatusSeeOther)
+				setFlash(w, "Failed to save config.", "flash-error")
+				http.Redirect(w, r, "/admin/config", http.StatusSeeOther)
 				return
 			}
 		}
@@ -291,13 +313,15 @@ func (h *Handler) ConfigSave() http.HandlerFunc {
 		if h.reloadAPNs != nil {
 			if err := h.reloadAPNs(&effectiveCfg); err != nil {
 				log.Printf("admin: APNs reload failed: %v", err)
-				http.Redirect(w, r, "/admin/config?flash=Config+saved+but+APNs+reload+failed:+"+err.Error()+"&flash_class=flash-error", http.StatusSeeOther)
+				setFlash(w, "Config saved but APNs reload failed.", "flash-error")
+				http.Redirect(w, r, "/admin/config", http.StatusSeeOther)
 				return
 			}
 			log.Printf("admin: APNs client reloaded successfully")
 		}
 
-		http.Redirect(w, r, "/admin/config?flash=Config+saved+and+APNs+reloaded.&flash_class=flash-success", http.StatusSeeOther)
+		setFlash(w, "Config saved and APNs reloaded.", "flash-success")
+		http.Redirect(w, r, "/admin/config", http.StatusSeeOther)
 	}
 }
 
@@ -326,6 +350,38 @@ func (h *Handler) Logout() http.HandlerFunc {
 // BuildAPNsClient creates a new APNs client from config. Exported for use in server.go.
 func BuildAPNsClient(cfg *config.Config) (*apns.Client, error) {
 	return apns.NewClient(cfg)
+}
+
+func setFlash(w http.ResponseWriter, msg, class string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "admin_flash",
+		Value:    class + "|" + msg,
+		Path:     "/admin",
+		MaxAge:   10,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+func consumeFlash(r *http.Request, w http.ResponseWriter) (string, string) {
+	cookie, err := r.Cookie("admin_flash")
+	if err != nil || cookie.Value == "" {
+		return "", ""
+	}
+	// Clear the cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "admin_flash",
+		Value:    "",
+		Path:     "/admin",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	parts := strings.SplitN(cookie.Value, "|", 2)
+	if len(parts) != 2 {
+		return "", ""
+	}
+	return parts[1], parts[0]
 }
 
 func configOrDefault(m map[string]string, key, fallback string) string {

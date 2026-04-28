@@ -66,6 +66,79 @@ func (s *Store) GetAllUsers(ctx context.Context) ([]AdminUser, error) {
 	return out, rows.Err()
 }
 
+type AdminDevice struct {
+	DeviceID   string
+	Token      string
+	Platform   string
+	NotifyMode string
+	UpdatedAt  time.Time
+}
+
+func (s *Store) GetDeviceTokensByUser(ctx context.Context) (map[string][]AdminDevice, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT user_id, device_id, token, platform, notify_mode, updated_at
+		 FROM device_tokens
+		 ORDER BY updated_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make(map[string][]AdminDevice)
+	for rows.Next() {
+		var userID string
+		var d AdminDevice
+		if err := rows.Scan(&userID, &d.DeviceID, &d.Token, &d.Platform, &d.NotifyMode, &d.UpdatedAt); err != nil {
+			return nil, err
+		}
+		out[userID] = append(out[userID], d)
+	}
+	return out, rows.Err()
+}
+
+type AdminNotification struct {
+	DeviceID         string
+	DeviceTokenPrefix string
+	PushType         string
+	Success          bool
+	ErrorReason      *string
+	CreatedAt        time.Time
+}
+
+func (s *Store) GetRecentNotificationsByUser(ctx context.Context) (map[string][]AdminNotification, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT user_id, device_id, device_token_prefix, push_type, success, error_reason, created_at
+		 FROM notification_log
+		 WHERE created_at > now() - interval '7 days'
+		 ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make(map[string][]AdminNotification)
+	for rows.Next() {
+		var userID string
+		var n AdminNotification
+		if err := rows.Scan(&userID, &n.DeviceID, &n.DeviceTokenPrefix, &n.PushType, &n.Success, &n.ErrorReason, &n.CreatedAt); err != nil {
+			return nil, err
+		}
+		out[userID] = append(out[userID], n)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) LogNotification(ctx context.Context, userID, deviceID, tokenPrefix, pushType string, success bool, errorReason string) {
+	var errPtr *string
+	if errorReason != "" {
+		errPtr = &errorReason
+	}
+	s.db.ExecContext(ctx,
+		`INSERT INTO notification_log (user_id, device_id, device_token_prefix, push_type, success, error_reason)
+		 VALUES ($1, $2, $3, $4, $5, $6)`,
+		userID, deviceID, tokenPrefix, pushType, success, errPtr)
+}
+
 type AdminCar struct {
 	ID           string
 	Name         string

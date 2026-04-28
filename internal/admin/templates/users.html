@@ -1,29 +1,89 @@
 {{define "content"}}
 <h2 style="margin-bottom: 24px;">Users ({{len .Users}})</h2>
+{{range .Users}}
 <div class="card">
+  <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+    <h2 style="margin:0; font-size:16px;">{{.Email}}</h2>
+    <span class="mono">{{slice .ID 0 8}}...</span>
+  </div>
+  <table>
+    <tbody>
+      <tr>
+        <td style="color:#86868b; width:120px;">Cars</td>
+        <td>{{.CarCount}}</td>
+      </tr>
+      <tr>
+        <td style="color:#86868b;">Last Sync</td>
+        <td>{{if .LastSyncAt}}{{.LastSyncAt.Format "Jan 2, 2006 3:04 PM"}}{{else}}<span class="badge badge-gray">Never</span>{{end}}</td>
+      </tr>
+      <tr>
+        <td style="color:#86868b;">Created</td>
+        <td>{{.CreatedAt.Format "Jan 2, 2006"}}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  {{$uid := .ID}}
+  {{$devices := index $.Devices $uid}}
+  {{$notifs := index $.Notifications $uid}}
+
+  {{if $devices}}
+  <h3 style="font-size:14px; margin-top:20px; margin-bottom:8px; color:#1d1d1f;">Devices ({{len $devices}})</h3>
   <table>
     <thead>
       <tr>
-        <th>Email</th>
-        <th>Cars</th>
-        <th>Last Sync</th>
-        <th>Created</th>
-        <th>ID</th>
+        <th>Device ID</th>
+        <th>Platform</th>
+        <th>Notify Mode</th>
+        <th>Token</th>
+        <th>Last Updated</th>
       </tr>
     </thead>
     <tbody>
-      {{range .Users}}
+      {{range $devices}}
       <tr>
-        <td>{{.Email}}</td>
-        <td>{{.CarCount}}</td>
-        <td>{{if .LastSyncAt}}{{.LastSyncAt.Format "Jan 2, 2006 3:04 PM"}}{{else}}<span class="badge badge-gray">Never</span>{{end}}</td>
-        <td>{{.CreatedAt.Format "Jan 2, 2006"}}</td>
-        <td class="mono">{{slice .ID 0 8}}...</td>
+        <td class="mono">{{.DeviceID}}</td>
+        <td>{{.Platform}}</td>
+        <td>{{if eq .NotifyMode "visible"}}<span class="badge badge-green">Visible</span>{{else}}<span class="badge badge-gray">Silent</span>{{end}}</td>
+        <td class="mono">{{if gt (len .Token) 8}}{{slice .Token 0 8}}...{{else}}{{.Token}}{{end}}</td>
+        <td>{{.UpdatedAt.Format "Jan 2, 2006 3:04 PM"}}</td>
       </tr>
-      {{else}}
-      <tr><td colspan="5" style="text-align:center; color:#86868b; padding:24px;">No users yet.</td></tr>
       {{end}}
     </tbody>
   </table>
+  {{else}}
+  <p style="color:#86868b; font-size:13px; margin-top:16px;">No registered devices.</p>
+  {{end}}
+
+  {{if $notifs}}
+  <h3 style="font-size:14px; margin-top:20px; margin-bottom:8px; color:#1d1d1f;">Recent Notifications ({{len $notifs}}, last 7 days)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Type</th>
+        <th>Device</th>
+        <th>Status</th>
+        <th>Error</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range $notifs}}
+      <tr>
+        <td>{{.CreatedAt.Format "Jan 2 3:04 PM"}}</td>
+        <td>{{if eq .PushType "alert"}}<span class="badge badge-green">Alert</span>{{else}}<span class="badge badge-gray">Background</span>{{end}}</td>
+        <td class="mono">{{.DeviceID}}</td>
+        <td>{{if .Success}}<span class="badge badge-green">OK</span>{{else}}<span class="badge badge-red">Failed</span>{{end}}</td>
+        <td>{{if .ErrorReason}}{{.ErrorReason}}{{else}}—{{end}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{end}}
 </div>
+{{else}}
+<div class="card">
+  <p style="text-align:center; color:#86868b; padding:24px;">No users yet.</p>
+</div>
+{{end}}
 {{end}}

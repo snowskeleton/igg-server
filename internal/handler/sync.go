@@ -260,16 +260,27 @@ func (h *SyncHandler) notifySharedUsers(apnsClient *apns.Client, userID, deviceI
 
 	for _, dt := range tokens {
 		var remove bool
+		var pushType string
 		switch dt.NotifyMode {
 		case "visible":
+			pushType = "alert"
 			remove = apnsClient.SendAlert(dt.Token, "I Got Gas", "A shared vehicle was updated")
 		default:
+			pushType = "background"
 			remove = apnsClient.SendBackground(dt.Token)
 		}
+
+		tokenPrefix := dt.Token
+		if len(tokenPrefix) > 8 {
+			tokenPrefix = tokenPrefix[:8]
+		}
 		if remove {
+			h.store.LogNotification(ctx, dt.UserID, dt.DeviceID, tokenPrefix, pushType, false, "token_invalid")
 			if err := h.store.DeleteDeviceTokenByToken(ctx, dt.Token); err != nil {
 				log.Printf("sync: cleanup invalid token: %v", err)
 			}
+		} else {
+			h.store.LogNotification(ctx, dt.UserID, dt.DeviceID, tokenPrefix, pushType, true, "")
 		}
 	}
 }

@@ -1,6 +1,7 @@
 package email
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
@@ -91,6 +92,12 @@ func (s *Sender) send(to, subject, body string) error {
 		return fmt.Errorf("smtp client: %w", err)
 	}
 	defer c.Close()
+
+	if ok, _ := c.Extension("STARTTLS"); ok {
+		if err := c.StartTLS(&tls.Config{ServerName: s.cfg.SMTPHost}); err != nil {
+			return fmt.Errorf("smtp starttls: %w", err)
+		}
+	}
 
 	auth := smtp.PlainAuth("", s.cfg.SMTPUser, s.cfg.SMTPPass, s.cfg.SMTPHost)
 	if err := c.Auth(auth); err != nil {

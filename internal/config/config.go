@@ -19,14 +19,15 @@ type Config struct {
 	SMTPFrom string
 	SMTPMock bool
 
+	// APNs fields — loaded exclusively from the DB via admin GUI
 	APNsKeyID      string
 	APNsTeamID     string
-	APNsKeyPath    string
 	APNsKeyContent string
 	APNsBundleID   string
 	APNsProduction bool
 
 	AdminEmail string
+	Debug      bool
 }
 
 func Load() (*Config, error) {
@@ -45,14 +46,8 @@ func Load() (*Config, error) {
 	port, _ := strconv.Atoi(getenv("SMTP_PORT", "587"))
 	c.SMTPPort = port
 
-	c.APNsKeyID = getenv("APNS_KEY_ID", "")
-	c.APNsTeamID = getenv("APNS_TEAM_ID", "")
-	c.APNsKeyPath = getenv("APNS_KEY_PATH", "")
-	c.APNsKeyContent = getenv("APNS_KEY_CONTENT", "")
-	c.APNsBundleID = getenv("APNS_BUNDLE_ID", "net.snowskeleton.I-Got-Gas")
-	c.APNsProduction = getenv("APNS_PRODUCTION", "false") == "true"
-
 	c.AdminEmail = getenv("ADMIN_EMAIL", "")
+	c.Debug = getenv("DEBUG", "false") == "true"
 
 	if c.JWTSecret == "" {
 		return nil, fmt.Errorf("JWT_SECRET is required")

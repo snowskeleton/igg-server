@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: igg
       POSTGRES_DB: igg
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
@@ -18,12 +18,10 @@ services:
   server:
     build: .
     ports:
-      - "8080:8080"
+      - "8601:8080"
     env_file: .env
     depends_on:
       db:
         condition: service_healthy
     restart: unless-stopped
 
-volumes:
-  pgdata:

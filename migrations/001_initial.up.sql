@@ -1,7 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- users
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email TEXT NOT NULL UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -9,7 +9,7 @@ CREATE TABLE users (
 );
 
 -- magic_tokens
-CREATE TABLE magic_tokens (
+CREATE TABLE IF NOT EXISTS magic_tokens (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     token TEXT NOT NULL UNIQUE,
@@ -19,7 +19,7 @@ CREATE TABLE magic_tokens (
 );
 
 -- refresh_tokens
-CREATE TABLE refresh_tokens (
+CREATE TABLE IF NOT EXISTS refresh_tokens (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     token_hash TEXT NOT NULL UNIQUE,
@@ -28,7 +28,7 @@ CREATE TABLE refresh_tokens (
 );
 
 -- cars
-CREATE TABLE cars (
+CREATE TABLE IF NOT EXISTS cars (
     id TEXT PRIMARY KEY,
     owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     make TEXT NOT NULL DEFAULT '',
@@ -46,7 +46,7 @@ CREATE TABLE cars (
 );
 
 -- services
-CREATE TABLE services (
+CREATE TABLE IF NOT EXISTS services (
     id TEXT PRIMARY KEY,
     car_id TEXT NOT NULL REFERENCES cars(id) ON DELETE CASCADE,
     cost DOUBLE PRECISION NOT NULL DEFAULT 0,
@@ -65,7 +65,7 @@ CREATE TABLE services (
 );
 
 -- scheduled_services
-CREATE TABLE scheduled_services (
+CREATE TABLE IF NOT EXISTS scheduled_services (
     id TEXT PRIMARY KEY,
     car_id TEXT NOT NULL REFERENCES cars(id) ON DELETE CASCADE,
     name TEXT NOT NULL DEFAULT '',
@@ -83,7 +83,7 @@ CREATE TABLE scheduled_services (
 );
 
 -- car_settings (per user per car)
-CREATE TABLE car_settings (
+CREATE TABLE IF NOT EXISTS car_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     car_id TEXT NOT NULL REFERENCES cars(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -100,7 +100,7 @@ CREATE TABLE car_settings (
 );
 
 -- car_shares
-CREATE TABLE car_shares (
+CREATE TABLE IF NOT EXISTS car_shares (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     car_id TEXT NOT NULL REFERENCES cars(id) ON DELETE CASCADE,
     shared_by_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -114,7 +114,7 @@ CREATE TABLE car_shares (
 );
 
 -- user_car_prefs (per-user pinned/archived for shared cars)
-CREATE TABLE user_car_prefs (
+CREATE TABLE IF NOT EXISTS user_car_prefs (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     car_id TEXT NOT NULL REFERENCES cars(id) ON DELETE CASCADE,
     pinned BOOLEAN NOT NULL DEFAULT false,
@@ -123,7 +123,7 @@ CREATE TABLE user_car_prefs (
 );
 
 -- sync_cursors
-CREATE TABLE sync_cursors (
+CREATE TABLE IF NOT EXISTS sync_cursors (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     device_id TEXT NOT NULL,
     cursor_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -131,15 +131,15 @@ CREATE TABLE sync_cursors (
 );
 
 -- indexes
-CREATE INDEX idx_cars_owner ON cars(owner_id);
-CREATE INDEX idx_services_car ON services(car_id);
-CREATE INDEX idx_services_updated ON services(updated_at);
-CREATE INDEX idx_scheduled_services_car ON scheduled_services(car_id);
-CREATE INDEX idx_scheduled_services_updated ON scheduled_services(updated_at);
-CREATE INDEX idx_car_settings_car_user ON car_settings(car_id, user_id);
-CREATE INDEX idx_car_shares_car ON car_shares(car_id);
-CREATE INDEX idx_car_shares_invited_email ON car_shares(invited_email);
-CREATE INDEX idx_car_shares_shared_with ON car_shares(shared_with_id);
-CREATE INDEX idx_cars_updated ON cars(updated_at);
-CREATE INDEX idx_magic_tokens_token ON magic_tokens(token);
-CREATE INDEX idx_refresh_tokens_hash ON refresh_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_cars_owner ON cars(owner_id);
+CREATE INDEX IF NOT EXISTS idx_services_car ON services(car_id);
+CREATE INDEX IF NOT EXISTS idx_services_updated ON services(updated_at);
+CREATE INDEX IF NOT EXISTS idx_scheduled_services_car ON scheduled_services(car_id);
+CREATE INDEX IF NOT EXISTS idx_scheduled_services_updated ON scheduled_services(updated_at);
+CREATE INDEX IF NOT EXISTS idx_car_settings_car_user ON car_settings(car_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_car_shares_car ON car_shares(car_id);
+CREATE INDEX IF NOT EXISTS idx_car_shares_invited_email ON car_shares(invited_email);
+CREATE INDEX IF NOT EXISTS idx_car_shares_shared_with ON car_shares(shared_with_id);
+CREATE INDEX IF NOT EXISTS idx_cars_updated ON cars(updated_at);
+CREATE INDEX IF NOT EXISTS idx_magic_tokens_token ON magic_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_hash ON refresh_tokens(token_hash);

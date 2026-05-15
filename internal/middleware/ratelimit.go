@@ -51,6 +51,23 @@ func (rl *RateLimiter) Allow(key string) bool {
 	return true
 }
 
+func (rl *RateLimiter) StartCleanup(interval, maxAge time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for range ticker.C {
+			rl.mu.Lock()
+			now := time.Now()
+			for key, b := range rl.buckets {
+				if now.Sub(b.lastCheck) > maxAge {
+					delete(rl.buckets, key)
+				}
+			}
+			rl.mu.Unlock()
+		}
+	}()
+}
+
 func RateLimit(rl *RateLimiter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

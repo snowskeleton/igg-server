@@ -10,7 +10,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 
@@ -42,19 +41,10 @@ func NewClient(cfg *config.Config) (*Client, error) {
 		return nil, nil
 	}
 
-	var keyData []byte
-	var err error
-
-	if cfg.APNsKeyContent != "" {
-		keyData = []byte(cfg.APNsKeyContent)
-	} else if cfg.APNsKeyPath != "" {
-		keyData, err = os.ReadFile(cfg.APNsKeyPath)
-		if err != nil {
-			return nil, fmt.Errorf("read APNs key file: %w", err)
-		}
-	} else {
-		return nil, fmt.Errorf("APNS_KEY_PATH or APNS_KEY_CONTENT is required when APNS_KEY_ID is set")
+	if cfg.APNsKeyContent == "" {
+		return nil, fmt.Errorf("APNs key content is required (configure via admin GUI)")
 	}
+	keyData := []byte(cfg.APNsKeyContent)
 
 	key, err := parseP8Key(keyData)
 	if err != nil {

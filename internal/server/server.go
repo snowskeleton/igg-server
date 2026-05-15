@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"sync/atomic"
+	"time"
 
 	"github.com/snowskeleton/igg-server/internal/admin"
 	"github.com/snowskeleton/igg-server/internal/apns"
@@ -102,6 +103,7 @@ func New(cfg *config.Config, store *postgres.Store) http.Handler {
 
 	// Middleware chain
 	rl := middleware.NewRateLimiter(10, 30) // 10 req/s, burst 30
+	rl.StartCleanup(5*time.Minute, 10*time.Minute)
 	var h http.Handler = mux
 	h = middleware.RateLimit(rl)(h)
 	h = middleware.Logging(h)
@@ -109,7 +111,7 @@ func New(cfg *config.Config, store *postgres.Store) http.Handler {
 	return h
 }
 
-// buildEffectiveConfig merges DB server_config values over env-based config.
+// buildEffectiveConfig loads APNs config exclusively from the DB (admin GUI).
 func buildEffectiveConfig(cfg *config.Config, store *postgres.Store) *config.Config {
 	eCfg := *cfg
 	ctx := context.Background()
@@ -118,20 +120,10 @@ func buildEffectiveConfig(cfg *config.Config, store *postgres.Store) *config.Con
 		log.Printf("WARNING: failed to load server_config from DB: %v", err)
 		return &eCfg
 	}
-	if v, ok := dbCfg["apns_key_id"]; ok && v != "" {
-		eCfg.APNsKeyID = v
-	}
-	if v, ok := dbCfg["apns_team_id"]; ok && v != "" {
-		eCfg.APNsTeamID = v
-	}
-	if v, ok := dbCfg["apns_key_content"]; ok && v != "" {
-		eCfg.APNsKeyContent = v
-	}
-	if v, ok := dbCfg["apns_bundle_id"]; ok && v != "" {
-		eCfg.APNsBundleID = v
-	}
-	if v, ok := dbCfg["apns_production"]; ok && v != "" {
-		eCfg.APNsProduction = v == "true"
-	}
+	eCfg.APNsKeyID = dbCfg["apns_key_id"]
+	eCfg.APNsTeamID = dbCfg["apns_team_id"]
+	eCfg.APNsKeyContent = dbCfg["apns_key_content"]
+	eCfg.APNsBundleID = dbCfg["apns_bundle_id"]
+	eCfg.APNsProduction = dbCfg["apns_production"] == "true"
 	return &eCfg
 }

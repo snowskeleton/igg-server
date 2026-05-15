@@ -86,6 +86,7 @@ func (h *Handler) Verify() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.URL.Query().Get("token")
 		if token == "" {
+			log.Printf("admin verify: missing token in query string")
 			RenderVerifyPage(w, VerifyPageData{
 				Title: "Verification Failed",
 				Error: "Missing token.",
@@ -93,8 +94,13 @@ func (h *Handler) Verify() http.HandlerFunc {
 			return
 		}
 
+		if h.cfg.Debug {
+			log.Printf("admin verify: attempting verification for token %.8s...", token)
+		}
+
 		mt, err := h.store.GetMagicToken(r.Context(), token)
 		if err != nil || mt == nil {
+			log.Printf("admin verify: GetMagicToken failed: err=%v, found=%v", err, mt != nil)
 			RenderVerifyPage(w, VerifyPageData{
 				Title: "Verification Failed",
 				Error: "Invalid or expired token.",
@@ -102,6 +108,7 @@ func (h *Handler) Verify() http.HandlerFunc {
 			return
 		}
 		if mt.Used || time.Now().After(mt.ExpiresAt) {
+			log.Printf("admin verify: token expired or used: used=%v, expires_at=%v", mt.Used, mt.ExpiresAt)
 			RenderVerifyPage(w, VerifyPageData{
 				Title: "Verification Failed",
 				Error: "This link has expired or already been used.",
@@ -111,6 +118,7 @@ func (h *Handler) Verify() http.HandlerFunc {
 
 		// Mark used
 		if err := h.store.MarkMagicTokenUsed(r.Context(), mt.ID); err != nil {
+			log.Printf("admin verify: MarkMagicTokenUsed failed: %v", err)
 			RenderVerifyPage(w, VerifyPageData{
 				Title: "Verification Failed",
 				Error: "Internal error.",
@@ -121,6 +129,7 @@ func (h *Handler) Verify() http.HandlerFunc {
 		// Verify the user is the admin
 		user, err := h.store.GetUserByID(r.Context(), mt.UserID)
 		if err != nil || user == nil || user.Email != h.cfg.AdminEmail {
+			log.Printf("admin verify: user check failed: err=%v, user=%v, adminEmail=%s", err, user != nil, h.cfg.AdminEmail)
 			RenderVerifyPage(w, VerifyPageData{
 				Title: "Verification Failed",
 				Error: "Unauthorized.",
@@ -131,6 +140,7 @@ func (h *Handler) Verify() http.HandlerFunc {
 		// Create admin session
 		sessionToken, err := auth.GenerateSessionToken()
 		if err != nil {
+			log.Printf("admin verify: GenerateSessionToken failed: %v", err)
 			RenderVerifyPage(w, VerifyPageData{
 				Title: "Verification Failed",
 				Error: "Internal error.",
@@ -141,6 +151,7 @@ func (h *Handler) Verify() http.HandlerFunc {
 		tokenHash := auth.HashSessionToken(sessionToken)
 		expiresAt := time.Now().Add(sessionDuration)
 		if err := h.store.CreateAdminSession(r.Context(), user.ID, tokenHash, expiresAt); err != nil {
+			log.Printf("admin verify: CreateAdminSession failed: %v", err)
 			RenderVerifyPage(w, VerifyPageData{
 				Title: "Verification Failed",
 				Error: "Internal error.",
@@ -261,11 +272,11 @@ func (h *Handler) ConfigPage() http.HandlerFunc {
 			APNsBundleID   string
 			APNsProduction bool
 		}{
-			APNsKeyID:      configOrDefault(cfgMap, "apns_key_id", h.cfg.APNsKeyID),
-			APNsTeamID:     configOrDefault(cfgMap, "apns_team_id", h.cfg.APNsTeamID),
-			APNsKeyContent: configOrDefault(cfgMap, "apns_key_content", h.cfg.APNsKeyContent),
-			APNsBundleID:   configOrDefault(cfgMap, "apns_bundle_id", h.cfg.APNsBundleID),
-			APNsProduction: configOrDefault(cfgMap, "apns_production", boolToStr(h.cfg.APNsProduction)) == "true",
+			APNsKeyID:      cfgMap["apns_key_id"],
+			APNsTeamID:     cfgMap["apns_team_id"],
+			APNsKeyContent: cfgMap["apns_key_content"],
+			APNsBundleID:   cfgMap["apns_bundle_id"],
+			APNsProduction: cfgMap["apns_production"] == "true",
 		}
 
 		flash, flashClass := consumeFlash(r, w)
@@ -384,16 +395,3 @@ func consumeFlash(r *http.Request, w http.ResponseWriter) (string, string) {
 	return parts[1], parts[0]
 }
 
-func configOrDefault(m map[string]string, key, fallback string) string {
-	if v, ok := m[key]; ok && v != "" {
-		return v
-	}
-	return fallback
-}
-
-func boolToStr(b bool) string {
-	if b {
-		return "true"
-	}
-	return "false"
-}

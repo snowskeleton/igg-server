@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"time"
 
@@ -19,6 +20,7 @@ func RequireSession(store *postgres.Store) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			cookie, err := r.Cookie("admin_session")
 			if err != nil {
+				log.Printf("admin session: no cookie, redirecting to login (path=%s)", r.URL.Path)
 				http.Redirect(w, r, "/admin/login", http.StatusSeeOther)
 				return
 			}
@@ -26,6 +28,8 @@ func RequireSession(store *postgres.Store) func(http.Handler) http.Handler {
 			tokenHash := auth.HashSessionToken(cookie.Value)
 			sess, err := store.GetAdminSession(r.Context(), tokenHash)
 			if err != nil || sess == nil || time.Now().After(sess.ExpiresAt) {
+				log.Printf("admin session: invalid session (err=%v, found=%v, expired=%v), redirecting to login",
+					err, sess != nil, sess != nil && time.Now().After(sess.ExpiresAt))
 				// Clear invalid cookie
 				http.SetCookie(w, &http.Cookie{
 					Name:     "admin_session",

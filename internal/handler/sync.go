@@ -15,12 +15,13 @@ import (
 )
 
 type SyncHandler struct {
-	store *postgres.Store
-	apns  *atomic.Pointer[apns.Client]
+	store     *postgres.Store
+	apns      *atomic.Pointer[apns.Client]
+	notifySem chan struct{}
 }
 
 func NewSyncHandler(store *postgres.Store, apnsPtr *atomic.Pointer[apns.Client]) *SyncHandler {
-	return &SyncHandler{store: store, apns: apnsPtr}
+	return &SyncHandler{store: store, apns: apnsPtr, notifySem: make(chan struct{}, 10)}
 }
 
 func (h *SyncHandler) Sync() http.HandlerFunc {
@@ -140,7 +141,15 @@ func (h *SyncHandler) Sync() http.HandlerFunc {
 			for id := range changedCarIDs {
 				carIDs = append(carIDs, id)
 			}
-			go h.notifySharedUsers(apnsClient, userID, req.DeviceID, carIDs)
+			select {
+			case h.notifySem <- struct{}{}:
+				go func() {
+					defer func() { <-h.notifySem }()
+					h.notifySharedUsers(apnsClient, userID, req.DeviceID, carIDs)
+				}()
+			default:
+				log.Printf("sync: notification semaphore full, skipping push for user %s", userID)
+			}
 		}
 
 		// ── Pull: gather all changes since cursor ──

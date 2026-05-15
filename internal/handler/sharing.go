@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 
@@ -82,7 +83,9 @@ func (h *SharingHandler) CreateShare() http.HandlerFunc {
 			carName = car.Make + " " + car.Model
 		}
 		ownerEmail := middleware.GetUserEmail(r.Context())
-		h.mailer.SendShareInvitation(body.Email, ownerEmail, carName, token)
+		if err := h.mailer.SendShareInvitation(body.Email, ownerEmail, carName, token); err != nil {
+			log.Printf("sharing: send invitation to %s: %v", body.Email, err)
+		}
 
 		writeJSON(w, http.StatusCreated, model.ShareResponse{
 			ID:           share.ID,

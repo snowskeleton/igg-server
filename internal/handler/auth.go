@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -66,6 +67,7 @@ func (h *AuthHandler) RequestMagicLink() http.HandlerFunc {
 
 		// Send email
 		if err := h.mailer.SendMagicLink(body.Email, token); err != nil {
+			log.Printf("auth: send magic link to %s: %v", body.Email, err)
 			writeError(w, http.StatusInternalServerError, "failed to send email")
 			return
 		}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -22,9 +23,21 @@ func New(databaseURL string) (*Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
-	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("ping db: %w", err)
+
+	// Retry connection for up to 30 seconds to handle startup ordering
+	var pingErr error
+	for attempt := range 10 {
+		if pingErr = db.Ping(); pingErr == nil {
+			break
+		}
+		log.Printf("database: waiting for postgres (attempt %d/10): %v", attempt+1, pingErr)
+		time.Sleep(3 * time.Second)
 	}
+	if pingErr != nil {
+		db.Close()
+		return nil, fmt.Errorf("ping db after retries: %w", pingErr)
+	}
+
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(5)
 	db.SetConnMaxLifetime(30 * time.Minute)
